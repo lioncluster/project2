@@ -86,7 +86,7 @@ Resources:
       Port: 80
       Protocol: HTTP
 
-  # ALBListenerSslCertificate:
+  # ALBListenerSslCertificate:     ## This part of the template is blocking the work.##
   #   Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
   #   Properties:
   #     Certificates:

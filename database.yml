@@ -1,0 +1,135 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  AWS CloudFormation Sample Template database Sample template
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - 
+        Label:
+          default: "EXPORT VPC"
+        Parameters:
+          - ExportVpcStackName
+      - 
+        Label:
+          default: "DATABASE PARAMETERS"
+        Parameters:
+          - DataBaseInstanceIdentifier
+          - DataBaseName
+          - DataBaseUser
+          - DataBasePassword
+          - DataBaseBackupRetentionPeriod
+          - DataBaseAllocatedStorage
+          - DataBaseInstanceClass
+          - MultiAZDataBase
+         
+Parameters:
+  ExportVpcStackName:
+    Description: Bring out the name of the VPC in the stack created before
+    Type: String
+  DataBaseInstanceIdentifier:
+    Description: Here is the Instance Identifier name
+    Type: String
+    MinLength: '1'
+    MaxLength: '60'
+    Default: mysqldb
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: Must begin with letter and contain only alphanumeric caracters
+  DataBaseName:
+    Description: Here is the Database name 
+    Type: String
+    MinLength: '1'
+    MaxLength: '64'
+    Default: NASFinancialDB
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription:  Must begin with letter and contain only alphanumeric caracters
+  DataBaseUser:
+    Description: Here is the Database primary user 
+    Type: String
+    MinLength: '1'
+    MaxLength: '24'
+    Default: admin
+    
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: Must contain only alphanumeric caracters
+  DataBasePassword:
+    Description: Here is the sectin for the password of th user 
+    Type: String
+    MinLength: '1'
+    MaxLength: '12'
+    Default: Lion2023
+    
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: Must begin with letter and contain only alphanumeric caracters 
+  DataBaseBackupRetentionPeriod:
+    Description: Here is the Database retention time 
+    Type: Number
+    MinValue: '0'
+    MaxValue: '31'
+    Default: 0
+    ConstraintDescription: The database can be retain for a limit og one month
+  DataBaseAllocatedStorage:
+    Description: Here isthe Database storage type and value
+    Type: Number
+    MinValue: '10'
+    MaxValue: '1024'
+    Default: 20
+    ConstraintDescription: The storage range will varie between 20 to 1024 GB
+  DataBaseInstanceClass:
+    Description: Here isthe Database instance type 
+    Type: String
+    AllowedValues:
+      - db.t1.micro
+      - db.t2.micro
+      - db.t2.large
+      - db.m1.small
+      - db.m1.meduim
+      - db.m1.large
+    ConstraintDescription: Must select a correct dbtype
+  MultiAZDataBase:
+    Description: Creating our Databein two AZ
+    Type: String
+    Default: false
+    AllowedValues:
+      - true
+      - false
+    ConstraintDescription: The batabase can be in two or not AZ
+
+Resources:
+  DatabaseSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnets group group for the database 
+      SubnetIds:
+        - Fn::ImportValue: !Sub '${ExportVpcStackName}-PrivateSubnet2'
+        - Fn::ImportValue: !Sub '${ExportVpcStackName}-PrivateSubnet3'
+        - Fn::ImportValue: !Sub '${ExportVpcStackName}-PrivateSubnet5'
+        - Fn::ImportValue: !Sub '${ExportVpcStackName}-PrivateSubnet6'
+      Tags:
+        - Key: Name 
+          Value: NAS-DB-PrivateSubnets
+
+  DataBaseInstance:
+    Type: AWS::RDS::DBInstance 
+    Properties:
+      AllocatedStorage: !Ref DataBaseAllocatedStorage
+      AvailabilityZone:  !Select [ 0, !GetAZs ''] 
+      BackupRetentionPeriod: !Ref DataBaseBackupRetentionPeriod
+      DBInstanceClass: !Ref DataBaseInstanceClass
+      DBInstanceIdentifier: !Ref DataBaseInstanceIdentifier
+      DBName: !Ref DataBaseName
+      DBSubnetGroupName: !Ref DatabaseSubnetGroup
+      Engine: MySQL
+      EngineVersion: 5.7.33
+      MasterUsername: !Ref DataBaseUser
+      MasterUserPassword: !Ref DataBasePassword
+      MultiAZ: !Ref MultiAZDataBase
+      VPCSecurityGroups: 
+        - Fn::ImportValue: !Sub '${ExportVpcStackName}-DataBaseSecurityGroup'
+      Tags:
+        - Key: Name 
+          Value: NAS-DB
+
+
+          
+  

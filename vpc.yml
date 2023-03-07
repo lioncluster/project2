@@ -1,0 +1,442 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  NAS Financial Group Sample Template VPC with public and private subnets, Internetgateway and public route table.
+  Sample template that creates a VPC with DNS and public IPs enabled. Note that you are billed
+  for the AWS resources that you use when you create a stack from this template.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "VPC CIDR"
+        Parameters:
+          - VpcCIDR
+      - 
+        Label:
+          default: "SUBNET CIDR"
+        Parameters:
+          - PublicSubnet1CIDR
+          - PublicSubnet2CIDR 
+          - PrivateSubnet1CIDR 
+          - PrivateSubnet2CIDR
+          - PrivateSubnet3CIDR
+          - PrivateSubnet4CIDR
+          - PrivateSubnet5CIDR
+          - PrivateSubnet6CIDR
+      -
+        Label:
+          default: "SSH IP"
+        Parameters:
+          - SSHLocationIP 
+         
+Parameters:
+  VpcCIDR:
+    Default: 192.168.0.0/20
+    Description: Please enter the IP range of the VPC
+    Type: String
+  PublicSubnet1CIDR:
+    Default: 192.168.1.0/24
+    Description: Please enter the IP range of the VPCpublic subnet 1
+    Type: String
+  PublicSubnet2CIDR:
+    Default: 192.168.2.0/24
+    Description: Please enter the IP range of the public subnet 2 
+    Type: String
+  PrivateSubnet1CIDR:
+    Default: 192.168.8.0/24
+    Description: Please enter the IP range of the private subnet 1
+    Type: String
+  PrivateSubnet2CIDR:
+    Default: 192.168.9.0/24
+    Description: Please enter the IP range of the private subnet 2 
+    Type: String
+  PrivateSubnet3CIDR:
+    Default: 192.168.10.0/24
+    Description: Please enter the IP range of the private subnet 3
+    Type: String
+  PrivateSubnet4CIDR:
+    Default: 192.168.11.0/24
+    Description: Please enter the IP range of the private subnet 4
+    Type: String  
+  PrivateSubnet5CIDR:
+    Default: 192.168.12.0/24
+    Description: Please enter the IP range of the private subnet 5
+    Type: String 
+  PrivateSubnet6CIDR:
+    Default: 192.168.15.0/24
+    Description: Please enter the IP range of the private subnet 6 
+    Type: String    
+
+  SSHLocationIP:
+    Description: The IP address range that can be used to SSH to the EC2 instances
+    Type: String
+    MinLength: '9'
+    MaxLength: '18'
+    Default: 0.0.0.0/0
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})" # IP Address
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+
+Resources:
+  VPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      CidrBlock: !Ref VpcCIDR
+      Tags:
+        - Key: Name 
+          Value: NAS-Project-VPC
+  PublicSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '']      #AZ1
+      MapPublicIpOnLaunch: true
+      CidrBlock: !Ref PublicSubnet1CIDR
+      Tags:
+       - Key: Name 
+         Value: NAS-Pub-Subnet1
+  PublicSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs '']      #AZ2
+      MapPublicIpOnLaunch: true
+      CidrBlock: !Ref PublicSubnet2CIDR
+      Tags:
+        - Key: Name 
+          Value: NAS-Pub-Subnet2       
+          
+  PrivateSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '']      #AZ1
+      CidrBlock: !Ref PrivateSubnet1CIDR
+      Tags:
+        - Key: Name 
+          Value: NAS-Priv-Subnet1
+  PrivateSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '']      #AZ1
+      CidrBlock: !Ref PrivateSubnet2CIDR
+      Tags:
+        - Key: Name 
+          Value: NAS-Priv-Subnet2 
+  PrivateSubnet3:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '']      #AZ1
+      CidrBlock: !Ref PrivateSubnet3CIDR
+      Tags:
+        - Key: Name 
+          Value: NAS-Priv-Subnet3  
+  PrivateSubnet4:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs '']      #AZ2
+      MapPublicIpOnLaunch: false
+      CidrBlock: !Ref PrivateSubnet4CIDR
+      Tags:
+        - Key: Name 
+          Value: NAS-Priv-Subnet4  
+  PrivateSubnet5:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs '']      #AZ2
+      MapPublicIpOnLaunch: false
+      CidrBlock: !Ref PrivateSubnet5CIDR
+      Tags:
+        - Key: Name 
+          Value: NAS-Priv-Subnet5 
+  PrivateSubnet6:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs '']      #AZ2
+      MapPublicIpOnLaunch: false
+      CidrBlock: !Ref PrivateSubnet6CIDR
+      Tags:
+        - Key: Name 
+          Value: NAS-Priv-Subnet6        
+
+
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: NAS-IGW
+  VPCGatewayAttachment:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: NAS-Pub-RT 
+  PublicRoute1:
+    Type: 'AWS::EC2::Route'
+    DependsOn: VPCGatewayAttachment 
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+  PublicSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  NatGateway1EIP:   #allocate Elastic IP address EIP1 for the first NAtgateway 
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: VPC 
+      Tags:
+        - Key: Name 
+          Value: EIP1 
+  NatGateway2EIP:   #allocate Elastic IP address EIP1 for the first NAtgateway 
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: VPC 
+      Tags:
+        - Key: Name 
+          Value: EIP2 
+
+  NatGateway1:   # create Natgateway 1
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway1EIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name 
+          Value: NAS-NatGateway1
+
+  NatGateway2:  #Create Natgateway2 
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway2EIP.AllocationId
+      SubnetId: !Ref PublicSubnet2
+      Tags:
+        - Key: Name 
+          Value: NAS-NatGateway2 
+  
+  PrivateRouteTable1:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      Tags:
+        - Key: Name 
+          Value: NAS-Private-RT1
+      VpcId: !Ref VPC
+        
+
+  PrivateRoute1:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+      RouteTableId: !Ref PrivateRouteTable1
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties: 
+      RouteTableId: !Ref PrivateRouteTable1
+      SubnetId: !Ref PrivateSubnet1
+      
+  PrivateSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties: 
+      RouteTableId: !Ref PrivateRouteTable1
+      SubnetId: !Ref PrivateSubnet2
+        
+  PrivateSubnet3RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties: 
+      RouteTableId: !Ref PrivateRouteTable1
+      SubnetId: !Ref PrivateSubnet3
+        
+
+  PrivateRouteTable2:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      Tags:
+        - Key: Name 
+          Value: NAS-Private-RT2
+      VpcId: !Ref VPC
+             
+
+  PrivateRoute2:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway2
+      RouteTableId: !Ref PrivateRouteTable2
+
+  PrivateSubnet4RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties: 
+      RouteTableId: !Ref PrivateRouteTable2
+      SubnetId: !Ref PrivateSubnet4
+        
+  PrivateSubnet5RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties: 
+      RouteTableId: !Ref PrivateRouteTable2
+      SubnetId: !Ref PrivateSubnet5
+        
+  PrivateSubnet6RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties: 
+      RouteTableId: !Ref PrivateRouteTable2
+      SubnetId: !Ref PrivateSubnet6
+        
+
+
+  WebServerSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable HTTP/HTTPS access via port 80/443 to the loadbalancer
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+        - IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          SourceSecurityGroupId: !Ref SSHSecurityGroup
+      Tags:
+        - Key: Name 
+          Value: NAS-WebServer-SG
+  ALBSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable HTTP/HTTPSaccess on port 80/443
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0 
+        - IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+          CidrIp: 0.0.0.0/0  
+      Tags:
+        - Key: Name 
+          Value: NAS-ALB-SG   
+  SSHSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: SSH security group
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: !Ref SSHLocationIP
+      Tags:
+        - Key: Name 
+          Value: NAS-SSH-SG  
+  DataBaseSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable HTTP/HTTPS access via port 3306 to the data base
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '3306'
+          ToPort: '3306'
+          SourceSecurityGroupId: !Ref WebServerSecurityGroup
+      Tags:
+        - Key: Name 
+          Value: NAS-DataBase-SG 
+Outputs:
+  VPCId:
+    Description: VPC ID
+    Value: !Ref VPC
+    Export:
+      Name: !Sub '${AWS::StackName}-VPCID'
+  PublicSubnet1:
+    Description: The first public subnet ID to use for public web servers
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnet1' #replacing a string
+  PublicSubnet2:
+    Description: The second public subnet ID to use for public web servers
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnet2'
+  PrivateSubnet1:
+    Description: The first private subnet ID to use for database
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet1'
+  PrivateSubnet2:
+    Description: The second private subnet ID to use for database
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet2'
+  PrivateSubnet3:
+    Description: The third private subnet ID to use for database
+    Value: !Ref PrivateSubnet3
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet3'
+  PrivateSubnet4:
+    Description: The third private subnet ID to use for database
+    Value: !Ref PrivateSubnet4
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet4'
+  PrivateSubnet5:
+    Description: The third private subnet ID to use for database
+    Value: !Ref PrivateSubnet5
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet5'
+  PrivateSubnet6:
+    Description: The third private subnet ID to use for database
+    Value: !Ref PrivateSubnet6
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet6'
+
+  WebServerSecurityGroup:
+    Description: The security group ID to use for public web servers
+    Value: !Ref WebServerSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-WebServerSecurityGroup'
+  ALBSecurityGroup:
+    Description: The security group ID to use for ApplicationLoad balancer
+    Value: !Ref ALBSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-ALBSecurityGroup'
+  DataBaseSecurityGroup:
+    Description: The security group ID to use for database servers
+    Value: !Ref DataBaseSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-DataBaseSecurityGroup'
+  SSHSecurityGroup:
+    Description: The security group ID to use for public web servers
+    Value: !Ref SSHSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-SSHSecurityGroup'

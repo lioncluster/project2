@@ -373,6 +373,28 @@ Resources:
       Tags:
         - Key: Name 
           Value: NAS-DataBase-SG 
+  # ContainerSecurityGroup:
+  #   Type: 'AWS::EC2::SecurityGroup'
+  #   Properties:
+  #     GroupDescription: Enable HTTP/HTTPS and Database access container via port 80/443 to the loadbalancer
+  #     VpcId: !Ref VPC
+  #     SecurityGroupIngress:
+  #       - IpProtocol: tcp
+  #         FromPort: '80'
+  #         ToPort: '80'
+  #         SourceSecurityGroupId: !Ref ALBSecurityGroup
+  #       - IpProtocol: tcp
+  #         FromPort: '443'
+  #         ToPort: '443'
+  #         SourceSecurityGroupId: !Ref ALBSecurityGroup
+  #       - IpProtocol: tcp
+  #         FromPort: '3306'
+  #         ToPort: '3306'
+  #         SourceSecurityGroupId: !Ref DataBaseSecurityGroup
+  #     Tags:
+  #       - Key: Name 
+  #         Value: NAS-Container-SG
+
 Outputs:
   VPCId:
     Description: VPC ID
@@ -440,3 +462,8 @@ Outputs:
     Value: !Ref SSHSecurityGroup
     Export:
       Name: !Sub '${AWS::StackName}-SSHSecurityGroup'
+  # ContainerSecurityGroup:
+  #   Description: The security group ID to use for containers
+  #   Value: !Ref ContainerSecurityGroup
+  #   Export:
+  #     Name: !Sub '${AWS::StackName}-ContainerSecurityGroup'

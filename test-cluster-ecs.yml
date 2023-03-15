@@ -1,0 +1,121 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  SubnetID:
+    Type: 'List<AWS::EC2::Subnet::Id>'
+
+  ExportVpcStackName:
+    Description: Bring out the name of the VPC in the stack created before
+    Type: String
+
+Resources:
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: dev-nas-financial-cluster
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: dev-nas-financial-log-group
+
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:  dev-nas-financialECSTask-role
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  ContainerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable access on port 80/443 to the container
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+        - IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+        - IpProtocol: tcp
+          FromPort: '3306'
+          ToPort: '3306'
+          SourceSecurityGroupId: !Ref DataBaseSecurityGroup
+      VpcId: 
+        Fn::ImportValue: !Sub '${ExportVpcStackName}-VPCID' 
+      Tags:
+        - Key: Name 
+          Value: NAS-Container-SG
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: deployment-example-task
+      Cpu: 256
+      Memory: 512
+      NetworkMode: awsvpc
+      ExecutionRoleArn: !Ref ExecutionRole
+      ContainerDefinitions:
+        - Name:  dev-nas-financialTaskDef-container
+          Image: nginx:1.17.7
+          PortMappings:
+            - ContainerPort: 80
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-region: !Ref AWS::Region
+              awslogs-group: !Ref LogGroup
+              awslogs-stream-prefix: ecs
+      RequiresCompatibilities:
+        - EC2
+        - FARGATE
+
+  Service:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName:  dev-nas-financial-service
+      Cluster: !Ref Cluster
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: 2
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          # AssignPublicIp: ENABLED
+          Subnets: !Ref SubnetID
+          SecurityGroups:
+            - !GetAtt ContainerSecurityGroup.GroupId
+      Tags:
+        - Key: Name 
+          Value: NAS-Financial-Service            
+
+  # ELB SG
+  
+  ALBSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable HTTP/HTTPS access on port 80/443
+      VpcId: 
+        Fn::ImportValue: !Sub '${ExportVpcStackName}-VPCID' 
+      GroupName: ALBSecurityGroup 
+      Tags:
+        - Key: Name 
+          Value: NAS-ALB-SG  
+
+  DataBaseSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable HTTP/HTTPS access via port 3306 to the data base
+      VpcId: 
+        Fn::ImportValue: !Sub '${ExportVpcStackName}-VPCID' 
+      Tags:
+        - Key: Name 
+          Value: NAS-DataBase-SG       
+        
+     

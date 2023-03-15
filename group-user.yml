@@ -30,7 +30,7 @@ Resources:
   OperationsGroup:
     Type: 'AWS::IAM::Group'
     Properties:      
-      GroupName: NAS-Fanancial-Group-Operation-Team    # give a name to this group 2nd Group 
+      GroupName: NAS-Fanancial-Group-Operation-Lion-Team    # give a name to this group 2nd Group 
       Path: '/'
       Policies: # list of inline policy documents that are embedded in the group
         - PolicyName: inlineDeployonus-east-1 # give a unique name to this policy
@@ -52,7 +52,7 @@ Resources:
   SecurityGroup:
     Type: 'AWS::IAM::Group'
     Properties:     
-      GroupName: NAS-Financial_Group-Security-Team   # give a name to this group 3rd Group 
+      GroupName: NAS-Financial_Group-Security-Lion-Team   # give a name to this group 3rd Group 
       Path: '/'
       ManagedPolicyArns: # list of ARNs of IAM managed policies that you want to attach to the group
         - arn:aws:iam::aws:policy/AdministratorAccess        # provide administrator access to AWS resources

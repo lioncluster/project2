@@ -1,0 +1,283 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "Certicicate ARN"
+        Parameters:
+          - AcmCertificate
+      - 
+        Label:
+          default: "Export VPC Stack Name"
+        Parameters:
+          - ExportVpcStackName 
+      - 
+        Label: 
+          default: "EC2 Parameters"
+        Parameters: 
+          - AmazonImageID
+          - InstanceType
+          - KeyName  
+Parameters:
+  # PublicSubnetId:
+  #   Type: 'List<AWS::EC2::Subnet::Id>'
+  SubnetId:
+    Type: 'List<AWS::EC2::Subnet::Id>'
+
+  ExportVpcStackName:
+    Description: Bring out the name of the VPC in the stack created before
+    Type: String
+
+  AcmCertificate:
+    Description: Name of the certification Manager
+    Type: String
+  
+  InstanceType:
+    Description: WebServer EC2 instance type 
+    Type: String 
+    Default: t2.micro
+    AllowedValues:
+      - t1.micro
+      - t2.micro
+      - t2.nano
+  KeyName: 
+    Description: Name of an existing EC2 key pair 
+    Type: 'AWS::EC2::KeyPair::KeyName' 
+  AmazonImageID: 
+    Description: Latest image ID 
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2    
+
+Resources:
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: dev-nas-financial-cluster
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: dev-nas-financial-log-group
+
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:  dev-nas-financialECSTask-role
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  ContainerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable access on port 80/443 to the container
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+        - IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+        - IpProtocol: tcp
+          FromPort: '3306'
+          ToPort: '3306'
+          SourceSecurityGroupId: 
+             Fn::ImportValue: !Sub '${ExportVpcStackName}-DataBaseSecurityGroup'
+      VpcId: 
+        Fn::ImportValue: !Sub '${ExportVpcStackName}-VPCID' 
+      Tags:
+        - Key: Name 
+          Value: NAS-Container-SG
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: deployment-example-task
+      Cpu: 256
+      Memory: 512
+      NetworkMode: awsvpc
+      ExecutionRoleArn: !Ref ExecutionRole
+      ContainerDefinitions:
+        - Name:  dev-nas-financialTaskDef-container
+          Image: nginx:1.17.7
+          PortMappings:
+            - ContainerPort: 80
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-region: !Ref AWS::Region
+              awslogs-group: !Ref LogGroup
+              awslogs-stream-prefix: ecs
+      RequiresCompatibilities:
+        - EC2
+        - FARGATE
+
+  Service:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName:  dev-nas-financial-service
+      Cluster: !Ref Cluster
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: 2
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          # AssignPublicIp: ENABLED
+          Subnets: !Ref SubnetId
+          SecurityGroups:
+            - !GetAtt ContainerSecurityGroup.GroupId
+      Tags:
+        - Key: Name 
+          Value: NAS-Financial-Service            
+
+  # ELB SG
+  
+  ALBSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable HTTP/HTTPS access on port 80/443
+      VpcId: 
+        Fn::ImportValue: !Sub '${ExportVpcStackName}-VPCID' 
+      GroupName: ALBSecurityGroup 
+      Tags:
+        - Key: Name 
+          Value: NAS-ALB-SG  
+
+  # DataBaseSecurityGroup:
+  #   Type: 'AWS::EC2::SecurityGroup'
+  #   Properties:
+  #     GroupDescription: Enable HTTP/HTTPS access via port 3306 to the data base
+  #     VpcId: 
+  #       Fn::ImportValue: !Sub '${ExportVpcStackName}-VPCID' 
+  #     Tags:
+  #       - Key: Name 
+  #         Value: NAS-DataBase-SG    
+
+  EC2Instance1: 
+    Type: 'AWS::EC2::Instance' 
+    Properties: 
+      InstanceType: !Ref InstanceType 
+      SubnetId: 
+        Fn::ImportValue: !Sub ${ExportVpcStackName}-PrivateSubnet1
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub ${ExportVpcStackName}-WebServerSecurityGroup  
+      KeyName: !Ref KeyName  
+      ImageId: !Ref AmazonImageID 
+      Tags: 
+        - Key: Name 
+          Value: PrivateWebServer1 
+      UserData: 
+        Fn::Base64: 
+          !Sub |
+            #!/bin/bash
+            yum update -y
+            yum install httpd -y
+            echo '<html><body><h1 style="color:Blue;">Welcome to the NAS Financial Server 1 (Blue)</h1></body></html>' > /var/www/html/index.html
+            sudo systemctl start httpd
+            sudo systemctl enable httpd
+
+  EC2Instance2: 
+    Type: 'AWS::EC2::Instance' 
+    Properties: 
+      InstanceType: !Ref InstanceType 
+      SubnetId: 
+        Fn::ImportValue: !Sub ${ExportVpcStackName}-PrivateSubnet4
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub ${ExportVpcStackName}-WebServerSecurityGroup  
+      KeyName: !Ref KeyName  
+      ImageId: !Ref AmazonImageID 
+      Tags: 
+        - Key: Name 
+          Value: PrivateWebServer2        
+      UserData: 
+        Fn::Base64: 
+          !Sub |
+            #!/bin/bash
+            yum update -y
+            yum install httpd -y
+            echo '<html><body><h1 style="color:Red;">Welcome to the NAS Financial Server 2 (Red)</h1></body></html>' > /var/www/html/index.html
+            sudo systemctl start httpd
+            sudo systemctl enable httpd. 
+
+  ApplicationLoadBalancer:  # Creation of the Application Load Balancer
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    Properties:
+      Name: NAS-ALB
+      SecurityGroups:
+        - Fn::ImportValue: !Sub '${ExportVpcStackName}-ALBSecurityGroup'
+      Subnets:
+        - Fn::ImportValue: !Sub '${ExportVpcStackName}-PublicSubnet1'
+        - Fn::ImportValue: !Sub '${ExportVpcStackName}-PublicSubnet2'
+  ALBListenerNoSslCertificate:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties: 
+      DefaultActions:
+        - RedirectConfig: 
+            Host: '#{host}'
+            Path: '/#{path}'
+            Port: '443'
+            Protocol: HTTPS 
+            StatusCode: HTTP_301
+          Type: redirect
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+  ALBListenerSslCertificate:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      Certificates:
+        - CertificateArn: !Ref AcmCertificate
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 443
+      Protocol: HTTPS      
+
+  ALBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties: 
+      HealthCheckIntervalSeconds: 10
+      HealthCheckPath: /
+      HealthCheckTimeoutSeconds: 5
+      # HealthyThreshholdCount: 2
+      Matcher: 
+        HttpCode: 200,302
+      # Name: MyWebServers
+      # Port: 80
+      Protocol:  HTTP 
+      Name: 'dev-nas-financial-service'
+      Port: 80
+      TargetType: ip     
+      UnhealthyThresholdCount: 5
+      VpcId: 
+        Fn::ImportValue: !Sub ${ExportVpcStackName}-VPCID 
+  
+Outputs:
+  ALBTargetGroup:
+    Description: Web Server Target group 
+    Export:
+      Name: !Sub '${AWS::StackName}-ALBTargetGroup'
+    Value: !Ref ALBTargetGroup  
+
+  ApplicationLoadBalancerDnsName:
+    Description: Web Server Target group 
+    Export:
+      Name: !Sub '${AWS::StackName}-ApplicationLoadBalancerDnsName'
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+
+  ApplicationLoadBalancerZoneID:
+    Description: Web Server Target group 
+    Export:
+      Name: !Sub '${AWS::StackName}-ApplicationLoadBalancerZoneID'
+    Value: !GetAtt ApplicationLoadBalancer.CanonicalHostedZoneID    
+        

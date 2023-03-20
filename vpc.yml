@@ -86,7 +86,7 @@ Resources:
       CidrBlock: !Ref VpcCIDR
       Tags:
         - Key: Name 
-          Value: NAS-Project-VPC
+          Value: Lion-NAS-VPC
   PublicSubnet1:
     Type: 'AWS::EC2::Subnet'
     Properties:
@@ -96,7 +96,7 @@ Resources:
       CidrBlock: !Ref PublicSubnet1CIDR
       Tags:
        - Key: Name 
-         Value: NAS-Pub-Subnet1
+         Value: Lion-NAS-Pub-Subnet1
   PublicSubnet2:
     Type: 'AWS::EC2::Subnet'
     Properties:
@@ -106,7 +106,7 @@ Resources:
       CidrBlock: !Ref PublicSubnet2CIDR
       Tags:
         - Key: Name 
-          Value: NAS-Pub-Subnet2       
+          Value: Lion-NAS-Pub-Subnet2       
           
   PrivateSubnet1:
     Type: 'AWS::EC2::Subnet'
@@ -116,7 +116,7 @@ Resources:
       CidrBlock: !Ref PrivateSubnet1CIDR
       Tags:
         - Key: Name 
-          Value: NAS-Priv-Subnet1
+          Value: Lion-NAS-Priv-Subnet1
   PrivateSubnet2:
     Type: 'AWS::EC2::Subnet'
     Properties:
@@ -125,7 +125,7 @@ Resources:
       CidrBlock: !Ref PrivateSubnet2CIDR
       Tags:
         - Key: Name 
-          Value: NAS-Priv-Subnet2 
+          Value: Lion-NAS-Priv-Subnet2 
   PrivateSubnet3:
     Type: 'AWS::EC2::Subnet'
     Properties:
@@ -134,7 +134,7 @@ Resources:
       CidrBlock: !Ref PrivateSubnet3CIDR
       Tags:
         - Key: Name 
-          Value: NAS-Priv-Subnet3  
+          Value: Lion-NAS-Priv-Subnet3  
   PrivateSubnet4:
     Type: 'AWS::EC2::Subnet'
     Properties:
@@ -144,7 +144,7 @@ Resources:
       CidrBlock: !Ref PrivateSubnet4CIDR
       Tags:
         - Key: Name 
-          Value: NAS-Priv-Subnet4  
+          Value: Lion-NAS-Priv-Subnet4  
   PrivateSubnet5:
     Type: 'AWS::EC2::Subnet'
     Properties:
@@ -154,7 +154,7 @@ Resources:
       CidrBlock: !Ref PrivateSubnet5CIDR
       Tags:
         - Key: Name 
-          Value: NAS-Priv-Subnet5 
+          Value: Lion-NAS-Priv-Subnet5 
   PrivateSubnet6:
     Type: 'AWS::EC2::Subnet'
     Properties:
@@ -164,7 +164,7 @@ Resources:
       CidrBlock: !Ref PrivateSubnet6CIDR
       Tags:
         - Key: Name 
-          Value: NAS-Priv-Subnet6        
+          Value: Lion-NAS-Priv-Subnet6        
 
 
   InternetGateway:
@@ -172,7 +172,7 @@ Resources:
     Properties:
       Tags:
         - Key: Name
-          Value: NAS-IGW
+          Value: Lion-NAS-IGW
   VPCGatewayAttachment:
     Type: 'AWS::EC2::VPCGatewayAttachment'
     Properties:
@@ -185,7 +185,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: NAS-Pub-RT 
+          Value: Lion-NAS-Pub-RT 
   PublicRoute1:
     Type: 'AWS::EC2::Route'
     DependsOn: VPCGatewayAttachment 
@@ -211,14 +211,14 @@ Resources:
       Domain: VPC 
       Tags:
         - Key: Name 
-          Value: EIP1 
+          Value: Lion-NAS-EIP1 
   NatGateway2EIP:   #allocate Elastic IP address EIP1 for the first NAtgateway 
     Type: AWS::EC2::EIP
     Properties:
       Domain: VPC 
       Tags:
         - Key: Name 
-          Value: EIP2 
+          Value: Lion-NAS-EIP2 
 
   NatGateway1:   # create Natgateway 1
     Type: AWS::EC2::NatGateway
@@ -227,7 +227,7 @@ Resources:
       SubnetId: !Ref PublicSubnet1
       Tags:
         - Key: Name 
-          Value: NAS-NatGateway1
+          Value: Lion-NAS-NatGateway1
 
   NatGateway2:  #Create Natgateway2 
     Type: AWS::EC2::NatGateway
@@ -236,14 +236,14 @@ Resources:
       SubnetId: !Ref PublicSubnet2
       Tags:
         - Key: Name 
-          Value: NAS-NatGateway2 
+          Value: Lion-NAS-NatGateway2 
   
   PrivateRouteTable1:
     Type: 'AWS::EC2::RouteTable'
     Properties:
       Tags:
         - Key: Name 
-          Value: NAS-Private-RT1
+          Value: Lion-NAS-Private-RT1
       VpcId: !Ref VPC
         
 
@@ -278,7 +278,7 @@ Resources:
     Properties:
       Tags:
         - Key: Name 
-          Value: NAS-Private-RT2
+          Value: Lion-NAS-Private-RT2
       VpcId: !Ref VPC
              
 
@@ -329,7 +329,7 @@ Resources:
           SourceSecurityGroupId: !Ref SSHSecurityGroup
       Tags:
         - Key: Name 
-          Value: NAS-WebServer-SG
+          Value: Lion-NAS-WebServer-SG
   ALBSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -346,7 +346,7 @@ Resources:
           CidrIp: 0.0.0.0/0  
       Tags:
         - Key: Name 
-          Value: NAS-ALB-SG   
+          Value: Lion-NAS-ALB-SG   
   SSHSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -359,7 +359,7 @@ Resources:
           CidrIp: !Ref SSHLocationIP
       Tags:
         - Key: Name 
-          Value: NAS-SSH-SG  
+          Value: Lion-NAS-SSH-SG  
   DataBaseSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -372,28 +372,7 @@ Resources:
           SourceSecurityGroupId: !Ref WebServerSecurityGroup
       Tags:
         - Key: Name 
-          Value: NAS-DataBase-SG 
-  # ContainerSecurityGroup:
-  #   Type: 'AWS::EC2::SecurityGroup'
-  #   Properties:
-  #     GroupDescription: Enable HTTP/HTTPS and Database access container via port 80/443 to the loadbalancer
-  #     VpcId: !Ref VPC
-  #     SecurityGroupIngress:
-  #       - IpProtocol: tcp
-  #         FromPort: '80'
-  #         ToPort: '80'
-  #         SourceSecurityGroupId: !Ref ALBSecurityGroup
-  #       - IpProtocol: tcp
-  #         FromPort: '443'
-  #         ToPort: '443'
-  #         SourceSecurityGroupId: !Ref ALBSecurityGroup
-  #       - IpProtocol: tcp
-  #         FromPort: '3306'
-  #         ToPort: '3306'
-  #         SourceSecurityGroupId: !Ref DataBaseSecurityGroup
-  #     Tags:
-  #       - Key: Name 
-  #         Value: NAS-Container-SG
+          Value: Lion-NAS-DataBase-SG 
 
 Outputs:
   VPCId:
@@ -462,8 +441,4 @@ Outputs:
     Value: !Ref SSHSecurityGroup
     Export:
       Name: !Sub '${AWS::StackName}-SSHSecurityGroup'
-  # ContainerSecurityGroup:
-  #   Description: The security group ID to use for containers
-  #   Value: !Ref ContainerSecurityGroup
-  #   Export:
-  #     Name: !Sub '${AWS::StackName}-ContainerSecurityGroup'
+  

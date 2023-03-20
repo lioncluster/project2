@@ -12,17 +12,15 @@ Metadata:
           default: "Export VPC Stack Name"
         Parameters:
           - ExportVpcStackName 
-      - 
-        Label: 
-          default: "EC2 Parameters"
-        Parameters: 
-          - AmazonImageID
-          - InstanceType
-          - KeyName  
+      
 Parameters:
-  # PublicSubnetId:
-  #   Type: 'List<AWS::EC2::Subnet::Id>'
-  SubnetId:
+
+  SubnetIdForALB:
+    Description: Please select the subnet IDs where you want to put your ALB. They should be public
+    Type: 'List<AWS::EC2::Subnet::Id>'
+
+  SubnetIdForContainer:
+    Description: Please select the subnet IDs where you want to put your containers. They should be private
     Type: 'List<AWS::EC2::Subnet::Id>'
 
   ExportVpcStackName:
@@ -31,39 +29,45 @@ Parameters:
 
   AcmCertificate:
     Description: Name of the certification Manager
-    Type: String
-  
-  InstanceType:
-    Description: WebServer EC2 instance type 
-    Type: String 
-    Default: t2.micro
-    AllowedValues:
-      - t1.micro
-      - t2.micro
-      - t2.nano
-  KeyName: 
-    Description: Name of an existing EC2 key pair 
-    Type: 'AWS::EC2::KeyPair::KeyName' 
-  AmazonImageID: 
-    Description: Latest image ID 
-    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
-    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2    
+    Type: 'AWS::SSM::Parameter::Value<String>' 
+    Default: lion-cluster-certificate
 
+  LionContainerImage:                                  # Added during presentation
+      Type: 'AWS::SSM::Parameter::Value<String>' 
+      Default: /lioncontainerimageURI
+  LionContainerName:
+    Type: String
+    Description: Name of app requiring ELB exposure
+    Default: Lion-container
+  LionContainerPort:
+    Type: Number
+    Description: Container port of app requiring ELB exposure
+    Default: '80'
+  LionAccoundID:                                  # Added during presentation
+      Type: 'AWS::SSM::Parameter::Value<String>' 
+      Default: /LionAccountID
+
+  # OperatorEmail:
+  #   Description: A valid email address to notify if any issue.
+  #   Type: 'AWS::SSM::Parameter::Value<String>' 
+  #   Default: lion-cluster-email
+  
+  
 Resources:
   Cluster:
     Type: AWS::ECS::Cluster
     Properties:
-      ClusterName: dev-nas-financial-cluster
+      ClusterName: Lion-Nasfinancial-cluster
 
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: dev-nas-financial-log-group
+      LogGroupName: Lion-Nasfinancial-loggroup
 
-  ExecutionRole:
+  LionExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName:  dev-nas-financialECSTask-role
+      RoleName:  Lion-NasfinancialECSTask-role
       AssumeRolePolicyDocument:
         Statement:
           - Effect: Allow
@@ -95,19 +99,19 @@ Resources:
         Fn::ImportValue: !Sub '${ExportVpcStackName}-VPCID' 
       Tags:
         - Key: Name 
-          Value: NAS-Container-SG
+          Value: Lion-NAS-Container-SG
 
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
-      Family: deployment-example-task
+      Family: LionNasTask
       Cpu: 256
       Memory: 512
       NetworkMode: awsvpc
-      ExecutionRoleArn: !Ref ExecutionRole
+      ExecutionRoleArn: !Ref LionExecutionRole
       ContainerDefinitions:
-        - Name:  dev-nas-financialTaskDef-container
-          Image: nginx:1.17.7
+        - Name: !Ref LionContainerName
+          Image: !Ref LionContainerImage
           PortMappings:
             - ContainerPort: 80
           LogConfiguration:
@@ -116,29 +120,69 @@ Resources:
               awslogs-region: !Ref AWS::Region
               awslogs-group: !Ref LogGroup
               awslogs-stream-prefix: ecs
+      RuntimePlatform:
+        CpuArchitecture: X86_64
+        OperatingSystemFamily: LINUX
       RequiresCompatibilities:
         - EC2
         - FARGATE
 
   Service:
     Type: AWS::ECS::Service
+    DependsOn: ALBListenerSslCertificate
     Properties:
-      ServiceName:  dev-nas-financial-service
+      ServiceName:  lion-nasfinancial-service
       Cluster: !Ref Cluster
       TaskDefinition: !Ref TaskDefinition
       DesiredCount: 2
       LaunchType: FARGATE
+      HealthCheckGracePeriodSeconds: 300
+      LoadBalancers:
+        - ContainerName: !Ref LionContainerName
+          ContainerPort: !Ref LionContainerPort
+          # LoadBalancerName: !Ref ApplicationLoadBalancer
+          TargetGroupArn: !Ref ALBTargetGroup
+      SchedulingStrategy: REPLICA
       NetworkConfiguration:
         AwsvpcConfiguration:
-          # AssignPublicIp: ENABLED
-          Subnets: !Ref SubnetId
+          AssignPublicIp: DISABLED
+          Subnets: !Ref SubnetIdForContainer
           SecurityGroups:
             - !GetAtt ContainerSecurityGroup.GroupId
       Tags:
         - Key: Name 
-          Value: NAS-Financial-Service            
+          Value: lion-nasfinancial-service 
 
-  # ELB SG
+  # NotificationTopic:
+  #   Type: AWS::SNS::Topic  
+  #   Properties: 
+  #     Subscription: 
+  #       - Endpoint: !Ref OperatorEmail
+  #         Protocol: EMAIL
+
+  ECSAutoScalingTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    DependsOn: Service
+    Properties:
+      MaxCapacity: 4
+      MinCapacity: 1
+      ResourceId: "service/Lion-Nasfinancial-cluster/lion-nasfinancial-service"
+      RoleARN: !GetAtt LionExecutionRole.Arn
+      ScalableDimension: "ecs:service:DesiredCount"
+      ServiceNamespace: "ecs"
+
+  ECSAutoScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: ecs-scaling-policy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref ECSAutoScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        ScaleInCooldown: 300
+        ScaleOutCooldown: 300
+        TargetValue: 70                         
   
   ALBSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
@@ -149,68 +193,13 @@ Resources:
       GroupName: ALBSecurityGroup 
       Tags:
         - Key: Name 
-          Value: NAS-ALB-SG  
+          Value: Lion-NAS-ALB-SG  
 
-  # DataBaseSecurityGroup:
-  #   Type: 'AWS::EC2::SecurityGroup'
-  #   Properties:
-  #     GroupDescription: Enable HTTP/HTTPS access via port 3306 to the data base
-  #     VpcId: 
-  #       Fn::ImportValue: !Sub '${ExportVpcStackName}-VPCID' 
-  #     Tags:
-  #       - Key: Name 
-  #         Value: NAS-DataBase-SG    
-
-  EC2Instance1: 
-    Type: 'AWS::EC2::Instance' 
-    Properties: 
-      InstanceType: !Ref InstanceType 
-      SubnetId: 
-        Fn::ImportValue: !Sub ${ExportVpcStackName}-PrivateSubnet1
-      SecurityGroupIds:
-        - Fn::ImportValue: !Sub ${ExportVpcStackName}-WebServerSecurityGroup  
-      KeyName: !Ref KeyName  
-      ImageId: !Ref AmazonImageID 
-      Tags: 
-        - Key: Name 
-          Value: PrivateWebServer1 
-      UserData: 
-        Fn::Base64: 
-          !Sub |
-            #!/bin/bash
-            yum update -y
-            yum install httpd -y
-            echo '<html><body><h1 style="color:Blue;">Welcome to the NAS Financial Server 1 (Blue)</h1></body></html>' > /var/www/html/index.html
-            sudo systemctl start httpd
-            sudo systemctl enable httpd
-
-  EC2Instance2: 
-    Type: 'AWS::EC2::Instance' 
-    Properties: 
-      InstanceType: !Ref InstanceType 
-      SubnetId: 
-        Fn::ImportValue: !Sub ${ExportVpcStackName}-PrivateSubnet4
-      SecurityGroupIds:
-        - Fn::ImportValue: !Sub ${ExportVpcStackName}-WebServerSecurityGroup  
-      KeyName: !Ref KeyName  
-      ImageId: !Ref AmazonImageID 
-      Tags: 
-        - Key: Name 
-          Value: PrivateWebServer2        
-      UserData: 
-        Fn::Base64: 
-          !Sub |
-            #!/bin/bash
-            yum update -y
-            yum install httpd -y
-            echo '<html><body><h1 style="color:Red;">Welcome to the NAS Financial Server 2 (Red)</h1></body></html>' > /var/www/html/index.html
-            sudo systemctl start httpd
-            sudo systemctl enable httpd. 
 
   ApplicationLoadBalancer:  # Creation of the Application Load Balancer
     Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
     Properties:
-      Name: NAS-ALB
+      Name: Lion-NAS-ALB
       SecurityGroups:
         - Fn::ImportValue: !Sub '${ExportVpcStackName}-ALBSecurityGroup'
       Subnets:
@@ -246,21 +235,19 @@ Resources:
   ALBTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties: 
-      HealthCheckIntervalSeconds: 10
+      HealthCheckIntervalSeconds: 30
       HealthCheckPath: /
-      HealthCheckTimeoutSeconds: 5
+      HealthCheckTimeoutSeconds: 10
       # HealthyThreshholdCount: 2
       Matcher: 
         HttpCode: 200,302
-      # Name: MyWebServers
-      # Port: 80
       Protocol:  HTTP 
-      Name: 'dev-nas-financial-service'
+      Name: 'lion-nasfinancial-service'
       Port: 80
-      TargetType: ip     
+      TargetType: ip   
       UnhealthyThresholdCount: 5
       VpcId: 
-        Fn::ImportValue: !Sub ${ExportVpcStackName}-VPCID 
+        Fn::ImportValue: !Sub '${ExportVpcStackName}-VPCID' 
   
 Outputs:
   ALBTargetGroup:
@@ -279,5 +266,4 @@ Outputs:
     Description: Web Server Target group 
     Export:
       Name: !Sub '${AWS::StackName}-ApplicationLoadBalancerZoneID'
-    Value: !GetAtt ApplicationLoadBalancer.CanonicalHostedZoneID    
-        
+    Value: !GetAtt ApplicationLoadBalancer.CanonicalHostedZoneID   

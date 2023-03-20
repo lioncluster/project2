@@ -40,7 +40,7 @@ Parameters:
     Type: String
     MinLength: '1'
     MaxLength: '64'
-    Default: NASFinancialDB
+    Default: LionNASFinancialDB
     AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
     ConstraintDescription:  Must begin with letter and contain only alphanumeric caracters
   DataBaseUser:
@@ -107,7 +107,7 @@ Resources:
         - Fn::ImportValue: !Sub '${ExportVpcStackName}-PrivateSubnet6'
       Tags:
         - Key: Name 
-          Value: NAS-DB-PrivateSubnets
+          Value: Lion-NAS-DB-PrivateSubnets
 
   DataBaseInstance:
     Type: AWS::RDS::DBInstance 
@@ -128,7 +128,7 @@ Resources:
         - Fn::ImportValue: !Sub '${ExportVpcStackName}-DataBaseSecurityGroup'
       Tags:
         - Key: Name 
-          Value: NAS-DB
+          Value: Lion-NAS-DB
 
 
           

@@ -1,0 +1,76 @@
+Description: Setup AWS resources in the N@G Auditing account for IAM cross account access
+
+Parameters:
+
+  lionNasAccountID:
+    Type: 'AWS::SSM::Parameter::Value<String>' # Nas Financial Group Account ID (594539588962)
+    Default: /lionNasAccountID
+
+  lionNasCrossAccountRole:
+    Type: 'AWS::SSM::Parameter::Value<String>' # Cross account role that was created on Nas Financial Group
+    Default: /lionNasCrossAccountRole
+
+  ExitingUserNames:
+    Description: Comma-delimited list of user names to attach to the group
+    Type: CommaDelimitedList
+
+  paramPath:
+    Description: IAM Path that you want to associate with the group 
+    Type: String
+    AllowedPattern: (^\/$)|(^\/.*\/$)
+    Default: '/'
+
+  paramUserName1:
+    Description: Unique name for a new user
+    Type: String
+    AllowedPattern: "^[a-zA-Z][a-zA-Z0-9]{1,64}$"
+    ConstraintDescription: User name must be between 1 and 64 alphanumeric characters in length, starting with an uppercase or lowercase character of the alphabet.
+  
+  paramUserPassword1:
+    Description: Account password for a new user
+    Type: String    
+    NoEcho: 'true' # mask the parameter value as asterisks (*****) to prevent it from being displayed in the console, CLI, or API
+    AllowedPattern: ^[a-zA-Z][a-zA-Z0-9!@#$%&]{8,32}$
+    ConstraintDescription: Password must be between 8 and 32 characters, start with lowercase or uppercase letter, and can be alphanumeric with the following special characters !@#$%&
+
+
+Resources:
+
+  crossaccountpolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Resource: !Sub 'arn:aws:iam::${lionNasAccountID}:role/${lionNasCrossAccountRole}'
+
+  crossaccountgroup:
+    Type: AWS::IAM::Group
+    DependsOn:
+      - crossaccountpolicy
+    Properties:
+      ManagedPolicyArns: 
+        - !Ref crossaccountpolicy
+
+  myAuditUser1:
+    Type: 'AWS::IAM::User'
+    DependsOn:
+      - crossaccountgroup
+    Properties:
+      UserName: !Ref paramUserName1 # give a name to this user
+      LoginProfile: # specify a password for this user
+        Password: !Ref paramUserPassword1
+        PasswordResetRequired: true # make this user to set a new password on next sign-in
+      Path: !Ref paramPath   
+      Groups: 
+          - !Ref crossaccountgroup    
+
+  myUserToGroupAddition:
+    Type: 'AWS::IAM::UserToGroupAddition'
+    Properties:
+      GroupName: !Ref crossaccountgroup # newly created cross account group name
+      Users: !Ref ExitingUserNames # list of existing user names
+      

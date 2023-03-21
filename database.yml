@@ -40,7 +40,7 @@ Parameters:
     Type: String
     MinLength: '1'
     MaxLength: '64'
-    Default: LionNASFinancialDB
+    Default: NASFinancialDB
     AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
     ConstraintDescription:  Must begin with letter and contain only alphanumeric caracters
   DataBaseUser:
@@ -57,7 +57,7 @@ Parameters:
     Type: String
     MinLength: '1'
     MaxLength: '12'
-    Default: Lion2023
+    Default: lion2023
     
     AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
     ConstraintDescription: Must begin with letter and contain only alphanumeric caracters 

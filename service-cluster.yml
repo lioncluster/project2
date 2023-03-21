@@ -77,29 +77,7 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
 
-  ContainerSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Enable access on port 80/443 to the container
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: '80'
-          ToPort: '80'
-          SourceSecurityGroupId: !Ref ALBSecurityGroup
-        - IpProtocol: tcp
-          FromPort: '443'
-          ToPort: '443'
-          SourceSecurityGroupId: !Ref ALBSecurityGroup
-        - IpProtocol: tcp
-          FromPort: '3306'
-          ToPort: '3306'
-          SourceSecurityGroupId: 
-             Fn::ImportValue: !Sub '${ExportVpcStackName}-DataBaseSecurityGroup'
-      VpcId: 
-        Fn::ImportValue: !Sub '${ExportVpcStackName}-VPCID' 
-      Tags:
-        - Key: Name 
-          Value: Lion-NAS-Container-SG
+  
 
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
@@ -148,17 +126,11 @@ Resources:
           AssignPublicIp: DISABLED
           Subnets: !Ref SubnetIdForContainer
           SecurityGroups:
-            - !GetAtt ContainerSecurityGroup.GroupId
+            - Fn::ImportValue: !Sub '${ExportVpcStackName}-ContainerSecurityGroup'
       Tags:
         - Key: Name 
           Value: lion-nasfinancial-service 
 
-  # NotificationTopic:
-  #   Type: AWS::SNS::Topic  
-  #   Properties: 
-  #     Subscription: 
-  #       - Endpoint: !Ref OperatorEmail
-  #         Protocol: EMAIL
 
   ECSAutoScalingTarget:
     Type: AWS::ApplicationAutoScaling::ScalableTarget
@@ -183,17 +155,7 @@ Resources:
         ScaleInCooldown: 300
         ScaleOutCooldown: 300
         TargetValue: 70                         
-  
-  ALBSecurityGroup:
-    Type: 'AWS::EC2::SecurityGroup'
-    Properties:
-      GroupDescription: Enable HTTP/HTTPS access on port 80/443
-      VpcId: 
-        Fn::ImportValue: !Sub '${ExportVpcStackName}-VPCID' 
-      GroupName: ALBSecurityGroup 
-      Tags:
-        - Key: Name 
-          Value: Lion-NAS-ALB-SG  
+   
 
 
   ApplicationLoadBalancer:  # Creation of the Application Load Balancer
@@ -248,6 +210,20 @@ Resources:
       UnhealthyThresholdCount: 5
       VpcId: 
         Fn::ImportValue: !Sub '${ExportVpcStackName}-VPCID' 
+
+  myDNSrecord: 
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneName: lion.nasfinancialgroup.com.  # put this in the parameter
+      Comment:  alias targeted to my LoadBalancer.
+      RecordSets:
+      - Name: www.lion.nasfinancialgroup.com.  # Put in this parameter and call it. 
+        Type: A
+        AliasTarget:
+          HostedZoneId: !GetAtt 'ApplicationLoadBalancer.CanonicalHostedZoneID'
+          DNSName: !GetAtt 'ApplicationLoadBalancer.DNSName'
+
+
   
 Outputs:
   ALBTargetGroup:
@@ -267,3 +243,7 @@ Outputs:
     Export:
       Name: !Sub '${AWS::StackName}-ApplicationLoadBalancerZoneID'
     Value: !GetAtt ApplicationLoadBalancer.CanonicalHostedZoneID   
+
+  outputWebserverDNSName:
+    Description: DNS A record name of the website
+    Value: !Join [ "", [ "https://", www.lion.nasfinancialgroup.com ] ] # return the Name of the DNS A record 

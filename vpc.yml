@@ -24,11 +24,11 @@ Metadata:
           - PrivateSubnet4CIDR
           - PrivateSubnet5CIDR
           - PrivateSubnet6CIDR
-      -
-        Label:
-          default: "SSH IP"
-        Parameters:
-          - SSHLocationIP 
+      # -
+      #   Label:
+      #     default: "SSH IP"
+      #   Parameters:
+      #     - SSHLocationIP 
          
 Parameters:
   VpcCIDR:
@@ -68,14 +68,14 @@ Parameters:
     Description: Please enter the IP range of the private subnet 6 
     Type: String    
 
-  SSHLocationIP:
-    Description: The IP address range that can be used to SSH to the EC2 instances
-    Type: String
-    MinLength: '9'
-    MaxLength: '18'
-    Default: 0.0.0.0/0
-    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})" # IP Address
-    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+  # SSHLocationIP:
+  #   Description: The IP address range that can be used to SSH to the EC2 instances
+  #   Type: String
+  #   MinLength: '9'
+  #   MaxLength: '18'
+  #   Default: 0.0.0.0/0
+  #   AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})" # IP Address
+  #   ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
 
 Resources:
   VPC:
@@ -309,7 +309,7 @@ Resources:
         
 
 
-  WebServerSecurityGroup:
+  ContainerSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: Enable HTTP/HTTPS access via port 80/443 to the loadbalancer
@@ -323,13 +323,13 @@ Resources:
           FromPort: '443'
           ToPort: '443'
           SourceSecurityGroupId: !Ref ALBSecurityGroup
-        - IpProtocol: tcp
-          FromPort: '22'
-          ToPort: '22'
-          SourceSecurityGroupId: !Ref SSHSecurityGroup
+        # - IpProtocol: tcp
+        #   FromPort: '3306'
+        #   ToPort: '3306'
+        #   SourceSecurityGroupId: !Ref DataBaseSecurityGroup
       Tags:
         - Key: Name 
-          Value: Lion-NAS-WebServer-SG
+          Value: Lion-NAS-Container-SG
   ALBSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -347,19 +347,19 @@ Resources:
       Tags:
         - Key: Name 
           Value: Lion-NAS-ALB-SG   
-  SSHSecurityGroup:
-    Type: 'AWS::EC2::SecurityGroup'
-    Properties:
-      GroupDescription: SSH security group
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: '22'
-          ToPort: '22'
-          CidrIp: !Ref SSHLocationIP
-      Tags:
-        - Key: Name 
-          Value: Lion-NAS-SSH-SG  
+  # SSHSecurityGroup:
+  #   Type: 'AWS::EC2::SecurityGroup'
+  #   Properties:
+  #     GroupDescription: SSH security group
+  #     VpcId: !Ref VPC
+  #     SecurityGroupIngress:
+  #       - IpProtocol: tcp
+  #         FromPort: '22'
+  #         ToPort: '22'
+  #         CidrIp: !Ref SSHLocationIP
+  #     Tags:
+  #       - Key: Name 
+  #         Value: Lion-NAS-SSH-SG  
   DataBaseSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -369,7 +369,11 @@ Resources:
         - IpProtocol: tcp
           FromPort: '3306'
           ToPort: '3306'
-          SourceSecurityGroupId: !Ref WebServerSecurityGroup
+          SourceSecurityGroupId: !Ref ContainerSecurityGroup
+        - IpProtocol: tcp
+          FromPort: '3306'
+          ToPort: '3306'
+          SourceSecurityGroupId: !Ref ALBSecurityGroup 
       Tags:
         - Key: Name 
           Value: Lion-NAS-DataBase-SG 
@@ -421,11 +425,11 @@ Outputs:
     Export:
       Name: !Sub '${AWS::StackName}-PrivateSubnet6'
 
-  WebServerSecurityGroup:
+  ContainerSecurityGroup:
     Description: The security group ID to use for public web servers
-    Value: !Ref WebServerSecurityGroup
+    Value: !Ref ContainerSecurityGroup
     Export:
-      Name: !Sub '${AWS::StackName}-WebServerSecurityGroup'
+      Name: !Sub '${AWS::StackName}-ContainerSecurityGroup'
   ALBSecurityGroup:
     Description: The security group ID to use for ApplicationLoad balancer
     Value: !Ref ALBSecurityGroup
@@ -436,9 +440,9 @@ Outputs:
     Value: !Ref DataBaseSecurityGroup
     Export:
       Name: !Sub '${AWS::StackName}-DataBaseSecurityGroup'
-  SSHSecurityGroup:
-    Description: The security group ID to use for public web servers
-    Value: !Ref SSHSecurityGroup
-    Export:
-      Name: !Sub '${AWS::StackName}-SSHSecurityGroup'
+  # SSHSecurityGroup:
+  #   Description: The security group ID to use for public web servers
+  #   Value: !Ref SSHSecurityGroup
+  #   Export:
+  #     Name: !Sub '${AWS::StackName}-SSHSecurityGroup'
   

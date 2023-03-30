@@ -1,0 +1,166 @@
+## =================== VERSION ===================
+AWSTemplateFormatVersion: '2010-09-09'
+
+## =================== DESCRIPTION ===================
+Description: >-
+  AWS CloudFormation sample template. 
+  Create an IAM Group, userA, and attach an AWS managed policy to group
+  AWS doc: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-iam-group.html
+
+## =================== PARAMETERS ===================
+Parameters:
+
+  paramUserName1:
+    Description: Unique name for a new user
+    Type: String
+    AllowedPattern: "^[a-zA-Z][a-zA-Z0-9]{1,64}$"
+    ConstraintDescription: User name must be between 1 and 64 alphanumeric characters in length, starting with an uppercase or lowercase character of the alphabet.
+  paramUserPassword1:
+    Description: Account password for a new user
+    Type: String    
+    NoEcho: 'true' # mask the parameter value as asterisks (*****) to prevent it from being displayed in the console, CLI, or API
+    AllowedPattern: ^[a-zA-Z][a-zA-Z0-9!@#$%&]{8,32}$
+    ConstraintDescription: Password must be between 8 and 32 characters, start with lowercase or uppercase letter, and can be alphanumeric with the following special characters !@#$%&
+
+  paramUserName2:
+    Description: Unique name for a new user
+    Type: String
+    AllowedPattern: "^[a-zA-Z][a-zA-Z0-9]{1,64}$"
+    ConstraintDescription: User name must be between 1 and 64 alphanumeric characters in length, starting with an uppercase or lowercase character of the alphabet.
+  paramUserPassword2:
+    Description: Account password for a new user
+    Type: String    
+    NoEcho: 'true' # mask the parameter value as asterisks (*****) to prevent it from being displayed in the console, CLI, or API
+    AllowedPattern: ^[a-zA-Z][a-zA-Z0-9!@#$%&]{8,32}$
+    ConstraintDescription: Password must be between 8 and 32 characters, start with lowercase or uppercase letter, and can be alphanumeric with the following special characters !@#$%&
+  
+  paramUserName3:
+    Description: Unique name for a new user
+    Type: String
+    AllowedPattern: "^[a-zA-Z][a-zA-Z0-9]{1,64}$"
+    ConstraintDescription: User name must be between 1 and 64 alphanumeric characters in length, starting with an uppercase or lowercase character of the alphabet.
+  paramUserPassword3:
+    Description: Account password for a new user
+    Type: String    
+    NoEcho: 'true' # mask the parameter value as asterisks (*****) to prevent it from being displayed in the console, CLI, or API
+    AllowedPattern: ^[a-zA-Z][a-zA-Z0-9!@#$%&]{8,32}$
+    ConstraintDescription: Password must be between 8 and 32 characters, start with lowercase or uppercase letter, and can be alphanumeric with the following special characters !@#$%&
+  
+
+  paramPath:
+    Description: IAM Path that you want to associate with the group 
+    Type: String
+    AllowedPattern: (^\/$)|(^\/.*\/$)
+    Default: '/'
+
+## =================== RESOURCES ===================
+Resources:
+
+  myGroup1:
+    Type: 'AWS::IAM::Group'
+    Properties:
+      GroupName: NASFinancialGroupSecurityTeam # give a name to this group
+      Path: !Ref paramPath
+      ManagedPolicyArns: # list of ARNs of IAM managed policies that is attached to this group
+        - arn:aws:iam::aws:policy/AdministratorAccess # Provides full access to AWS services and resources with billing
+
+
+  myGroup2:
+    Type: 'AWS::IAM::Group'
+    Properties:
+      GroupName: CloudSpaceEngineerLionGroup # give a name to this group
+      Path: !Ref paramPath        
+      Policies: # list of inline policy documents that are embedded in the group
+        - PolicyName: inlineBillingExcludePolicy # have administrative access, except billing
+          PolicyDocument: # JSON policy document
+            Version: '2012-10-17'
+            Statement: # Deny billing access to group, but has administrative access
+              - Effect: Allow
+                Action:
+                  - '*'
+                Resource: '*'
+              - Effect: Deny
+                Action:
+                  - 'aws-portal:*'
+                Resource: '*'
+              
+  myGroup3:
+    Type: 'AWS::IAM::Group'
+    Properties:
+      GroupName: NASFinancialGroupOperationTeam # give a name to this group
+      Path: !Ref paramPath        
+      Policies: # list of inline policy documents that are embedded in the group
+        - PolicyName: inlineDeployUSEast1Policy # give a unique name to this policy
+          PolicyDocument: # JSON policy document
+            Version: '2012-10-17'
+            Statement: # Deploy only in us-east-1 region
+              - Effect: Allow
+                Action:
+                  - '*'
+                Resource: '*'
+                Condition: 
+                  StringEquals:
+                      "aws:RequestedRegion": "us-east-1"
+
+  myUser1:
+    Type: 'AWS::IAM::User'
+    Properties:
+      UserName: !Ref paramUserName1 # give a name to this user
+      LoginProfile: # specify a password for this user
+        Password: !Ref paramUserPassword1
+        PasswordResetRequired: true # make this user to set a new password on next sign-in
+      Path: !Ref paramPath
+      Groups: 
+          - !Ref myGroup1
+  myUser2:
+    Type: 'AWS::IAM::User'
+    Properties:
+      UserName: !Ref paramUserName2 # give a name to this user
+      LoginProfile: # specify a password for this user
+        Password: !Ref paramUserPassword2
+        PasswordResetRequired: true # make this user to set a new password on next sign-in
+      Path: !Ref paramPath
+      Groups: 
+          - !Ref myGroup2
+  myUser3:
+    Type: 'AWS::IAM::User'
+    Properties:
+      UserName: !Ref paramUserName3 # give a name to this user
+      LoginProfile: # specify a password for this user
+        Password: !Ref paramUserPassword3
+        PasswordResetRequired: true # make this user to set a new password on next sign-in
+      Path: !Ref paramPath
+      Groups: 
+          - !Ref myGroup3
+  
+## =================== OUTPUT ===================
+Outputs:
+  outputGroupName1:
+    Description: Group name
+    Value: !Ref myGroup1
+  outputUserName1:
+    Description: User name
+    Value: !Ref myUser1
+  outputARN1:
+    Description: Group ARN
+    Value: !GetAtt myGroup1.Arn  
+
+  outputGroupName2:
+    Description: Group name
+    Value: !Ref myGroup2
+  outputUserName2:
+    Description: User name
+    Value: !Ref myUser2
+  outputARN2:
+    Description: Group ARN
+    Value: !GetAtt myGroup2.Arn
+
+  outputGroupName3:
+    Description: Group name
+    Value: !Ref myGroup3
+  outputUserName3:
+    Description: User name
+    Value: !Ref myUser3
+  outputARN3:
+    Description: Group ARN
+    Value: !GetAtt myGroup3.Arn                   

@@ -106,3 +106,24 @@ Outputs:
   OriginAccessControl:
     Value:
       Ref: CloudFrontOriginAccessControl
+  # OutputCloudFrontDistribution:
+  #   Description: This is the CLF distro  
+  #   Export:
+  #     Name: !GetAtt '${AWS::StackName}-CloudFrontDistribution.CanonicalHostedZoneID'                            #     !Sub '${AWS::StackName}-CloudFrontDistribution'
+  #   Value: !Ref CloudFrontDistribution  
+  # OutputCloudFrontDistributionDNSName:
+  #   Description: This is the CLF distro  
+  #   Export:
+  #     Name: !GetAtt '${AWS::StackName}-CloudFrontDistribution.DNSName'                            #     !Sub '${AWS::StackName}-CloudFrontDistribution'
+  #   Value: !Ref CloudFrontDistribution  
+
+  # DistroZoneID:
+  #   Value:
+  #     !GetAtt  "CloudFrontDistribution.CanonicalHostedZoneID"
+  #   Export:
+  #     Name: DistroZoneID
+  DistroDnsName:
+    Value: 
+      !GetAtt "CloudFrontDistribution.DomainName"
+    Export:
+      Name: DistroDnsName

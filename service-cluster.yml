@@ -47,11 +47,18 @@ Parameters:
       Type: 'AWS::SSM::Parameter::Value<String>' 
       Default: /LionAccountID
 
-  # OperatorEmail:
-  #   Description: A valid email address to notify if any issue.
-  #   Type: 'AWS::SSM::Parameter::Value<String>' 
-  #   Default: lion-cluster-email
-  
+  CloudFrontdistribution:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Description: This is the cloudfront distro
+    Default: /CloudFrontDistribution
+
+  CloudFrontdistributionDomainName:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Description: This is the cloudfront distribution domaine name
+    Default: /CloudfrontDomaineName
+  MyHostedZoneId:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Default: /MyHostedZoneID
   
 Resources:
   Cluster:
@@ -77,7 +84,7 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
 
-  
+
 
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
@@ -220,26 +227,36 @@ Resources:
       - Name: www.lion.nasfinancialgroup.com.  # Put in this parameter and call it. 
         Type: A
         AliasTarget:
-          HostedZoneId: !GetAtt 'ApplicationLoadBalancer.CanonicalHostedZoneID'
+          HostedZoneId: !GetAtt 'ApplicationLoadBalancer.CanonicalHostedZoneID' #!Ref MyHostedZoneId  #!Sub "Z${ ApplicationLoadBalancer.CanonicalHostedZoneID}"
           DNSName: !GetAtt 'ApplicationLoadBalancer.DNSName'
-
-
-  
+        SetIdentifier: "us-east-1"  # SetIdentifier to specify the geographic region
+        GeoLocation:
+          #ContinentCode: NA  # Continent code to specify North America
+          CountryCode: US   # Country code to specify United States
+      - Name: www.lion.nasfinancialgroup.com.
+        Type: A
+        AliasTarget:
+          HostedZoneId: !Ref MyHostedZoneId
+          DNSName: !ImportValue DistroDnsName
+        SetIdentifier: "default" # SetIdentifier for the default redirect
+        GeoLocation:
+          CountryCode: "*"   # Wildcard to match all other countries
+    
 Outputs:
   ALBTargetGroup:
-    Description: Web Server Target group 
+    Description: ALB Target group 
     Export:
       Name: !Sub '${AWS::StackName}-ALBTargetGroup'
     Value: !Ref ALBTargetGroup  
 
   ApplicationLoadBalancerDnsName:
-    Description: Web Server Target group 
+    Description: ALB DNS Name 
     Export:
       Name: !Sub '${AWS::StackName}-ApplicationLoadBalancerDnsName'
     Value: !GetAtt ApplicationLoadBalancer.DNSName
 
   ApplicationLoadBalancerZoneID:
-    Description: Web Server Target group 
+    Description: ALB Zone ID
     Export:
       Name: !Sub '${AWS::StackName}-ApplicationLoadBalancerZoneID'
     Value: !GetAtt ApplicationLoadBalancer.CanonicalHostedZoneID   

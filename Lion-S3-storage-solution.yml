@@ -1,0 +1,59 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Simple cloud formation for bucket creation and configuration
+
+Parameters:
+  BucketName: 
+    Type: String
+    Default: "mylionbucket1" 
+
+Resources:  
+
+# The AccessLogBucket store the logs from the MainLionBucketS3Bucket and will requires log delivery write permissions to receive log from MainLionBucket
+  AccessLogBucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      AccessControl: LogDeliveryWrite
+            
+  mainlionbucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: !Ref BucketName
+# Make bucket private     
+      AccessControl: Private      
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+# set up bucket encryption 
+      BucketEncryption:           
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256  # S3-managed Keys (SSE-S3)
+# for KMS managed key
+              # SSEAlgorithm: aws:kms
+              # KMSMasterKeyID: arn:aws:kms:us-east-1:362013628963:key/8cab9614-39d2-4a37-b64b-f493094f86fa
+      VersioningConfiguration:
+        Status: Enabled
+# log access request
+      LoggingConfiguration:
+        DestinationBucketName: !Ref AccessLogBucket
+        LogFilePrefix: testing-logs
+# lifecycle policy for s3 where it will move to glacier after 30 days and will be deleted after 5 years i.e. 1825 days
+      LifecycleConfiguration:
+        Rules:
+          - Id: GlacierRule
+            Prefix: glacier
+            Status: Enabled
+            ExpirationInDays: 1825
+            Transitions:
+              - TransitionInDays: 30
+                StorageClass: GLACIER
+
+Outputs:
+  MainBucketName:
+    Description: Name of the main bucket
+    Value: !Ref mainlionbucket
+  LogBucketName:
+    Description: Name of the access log bucket
+    Value: !Ref AccessLogBucket

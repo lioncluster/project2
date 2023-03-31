@@ -127,3 +127,7 @@ Outputs:
       !GetAtt "CloudFrontDistribution.DomainName"
     Export:
       Name: DistroDnsName
+<<<<<<< HEAD
+=======
+
+>>>>>>> e480ddf23b969cd063e980b0c2fd7671342b5bd5
